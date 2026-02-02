@@ -119,37 +119,6 @@ Multi-tile objects use one DGRP per tile. Tile sprites align seamlessly across o
 
 ---
 
-### Reference Extraction: DGRP → SPR
-
-Each DGRP entry contains **sprite resource IDs** that must be resolved:
-
-**Reference Chain:**
-
-```
-DGRP entry
-  ↓
-SPR/SPR2 ID → Load sprite resource
-  ↓
-Palette ID → Load PALT for color lookup
-```
-
-**Typical References per DGRP:**
-
-| Property          | Count | Notes                          |
-| ----------------- | ----- | ------------------------------ |
-| Sprites per entry | 1–8   | Average 3–4                    |
-| DGRP entries      | 12    | Fixed (4 directions × 3 zooms) |
-| Total SPR refs    | 36–96 | Per DGRP (typically 50–60)     |
-| Unique PALT ref   | 1–4   | Usually 1 (all sprites share)  |
-
-**Scope:**
-
-- All sprite IDs are **per-file references** (local to object's IFF)
-- Cross-file sprite references are unusual (use GLOB for shared sprites)
-- PALT ID is **per-file** but may be shared across multiple sprites
-
----
-
 ## Chapter 2: Sprite Formats (SPR# and SPR2)
 
 ### SPR# (8-bit Sprites)
@@ -301,49 +270,6 @@ Sprite Rendering:
 3. Get (R, G, B) color
 4. Apply to screen
 ```
-
----
-
-### Reference Extraction: SPR/SPR2 → PALT
-
-Both SPR# and SPR2 formats contain **palette IDs** that must be resolved:
-
-**SPR# Header Field:**
-
-```
-Offset 8: Palette ID (4-byte value)
-```
-
-**SPR2 Frame Fields:**
-
-```
-Frame Header Offset 8: Palette ID (override, 2-byte)
-Header Offset 8: Default Palette ID (4-byte)
-```
-
-**Reference Chain:**
-
-```
-DGRP
-  ↓
-SPR/SPR2 ID → Load sprite resource
-  ↓
-Palette ID (in SPR/SPR2 header) → Load PALT
-```
-
-**Typical References:**
-
-| Scenario              | PALT Count | Notes                           |
-| --------------------- | ---------- | ------------------------------- |
-| Single-palette object | 1          | Most common (all sprites share) |
-| Multi-palette object  | 2–4        | Different colors for states     |
-| Animated object       | 1–2        | Usually consistent palette      |
-
-**Scope:**
-
-- PALT IDs are **per-file references** (same IFF as sprites)
-- Shared palettes are uncommon but possible (cross-object reuse)
-- PALT may be numbered differently across expansions (same visual result)
 
 ---
 

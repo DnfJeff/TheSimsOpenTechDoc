@@ -339,49 +339,6 @@ Entries: Code + Length1 + String1 + Length2 + String2
 
 ---
 
-### Reference Extraction: STR# Usage
-
-STR# resources are referenced throughout object definitions:
-
-**Primary Reference Sources:**
-
-| Source     | Field                 | Reference Type  |
-| ---------- | --------------------- | --------------- |
-| OBJD       | CatalogStringsID      | Catalog text    |
-| OBJD       | BodyStringID          | Character data  |
-| TTAB (V5+) | String Table Index    | Menu labels     |
-| TPRP       | Parameter/local names | Property labels |
-
-**Reference Chain:**
-
-```
-OBJD.CatalogStringsID (2-byte ID)
-  ↓
-Load STR# resource
-  ↓
-String entries (multi-language support)
-  ↓
-Display in catalog, tooltips, etc.
-```
-
-**Typical Reference Counts:**
-
-| Object Type | STR# Count | Reason                             |
-| ----------- | ---------- | ---------------------------------- |
-| Minimal     | 1          | Catalog text only                  |
-| Interactive | 2–3        | +menu text per interaction         |
-| Character   | 3–5        | Body data + catalogs + CTSS        |
-| Complex     | 5–10       | Multiple categories + descriptions |
-
-**Scope:**
-
-- STR# IDs are **per-file references** (local to object's IFF)
-- String indices may be game-wide (Global.iff has master strings)
-- Multi-language support is built-in (format-dependent)
-- Missing STR# entries = blank text (graceful degradation)
-
----
-
 ## Chapter 4: FCNS Function Constants
 
 ### FCNS Overview
