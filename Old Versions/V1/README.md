@@ -85,12 +85,5 @@ Comprehensive technical reference for The Sims file formats, resource structures
 
 ---
 
-## 🔗 External Resources
 
-- [IFFSnooper](http://www.egould.demon.co.uk/sims/) — Peter Gould's research tool
-- [7DS Archive](https://web.archive.org/) — Community documentation (archived)
-- [Niotso/FreeSO](https://github.com/riperiperi/FreeSO) — Open source reimplementation
-
----
-
-_Documentation v1.1 — February 2026. Original sources credited within individual chapters._
+_Documentation revised 2026_

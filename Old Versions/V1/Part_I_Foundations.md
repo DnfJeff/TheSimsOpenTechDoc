@@ -59,7 +59,6 @@ This documentation originated from the SimTech project (simtech.sourceforge.net,
 - Don Hopkins — VM documentation, behavior analysis
 - Lee Reeves — Format discoveries
 - Peter Gould — IFFSnooper tool and documentation
-- Dnf_Jeff — BHAV classification, VM execution model research (2026)
 
 ---
 

@@ -272,30 +272,6 @@ BHAV resources are the executable code of The Sims — VM subroutines that drive
 | Max instructions | 253                   |
 | Byte order       | Little-endian         |
 
-### Core Architecture Truth
-
-> **The Sims 1 is 100% event-driven. There are NO inter-BHAV function calls.**
-
-- Engine owns the main loop, not BHAVs
-- BHAVs execute, return control to engine, engine calls next BHAV
-- Communication via **state variables**, not call stacks
-- OBJf chunk maps lifecycle events → BHAV IDs
-
-This is proven by the absence of opcode 0x0001 (BHAV Call) in actual game files.
-
-### BHAV Classification
-
-Analysis of 2,712 BHAVs across 126 objects reveals four behavioral types:
-
-| Type       | %     | Entry Point  | Structure             | Purpose                    |
-| ---------- | ----- | ------------ | --------------------- | -------------------------- |
-| **ROLE**   | 52.4% | OBJf Main    | Polling loop + yields | Autonomy core (owns Sim)   |
-| **FLOW**   | 45.0% | Internal     | Conditional branches  | Decision routing           |
-| **ACTION** | 1.6%  | TTAB action  | Linear, no loops      | User interaction outcome   |
-| **GUARD**  | 1.1%  | TTAB test    | Predicate, no yields  | Permission check (sync)    |
-
-⚠️ **No UTILITY type exists** — utilities require a call hierarchy, which the event-driven model doesn't support.
-
 ### Physical Structure
 
 ```text
@@ -394,45 +370,53 @@ When an instruction has an opcode ≥ 256, it's a subroutine call to another BHA
 
 The VM provides ~50 built-in primitives covering simulation operations. **Expression (opcode 2) dominates:** 57% of all executed instructions.
 
-#### Complete Opcode Reference
+#### Flow Control
 
-| Op | Hex  | Name              | Category | Purpose                          |
-|----|------|-------------------|----------|----------------------------------|
-| 0  | 0000 | Sleep/Yield       | Control  | Pause N ticks                    |
-| 2  | 0002 | **Expression**    | Math     | Arithmetic/comparison (**57%!**) |
-| 4  | 0004 | Grab              | Object   | Pick up object                   |
-| 5  | 0005 | Drop              | Object   | Put down object                  |
-| 6  | 0006 | Change Article    | Sim      | Change suit/accessory            |
-| 7  | 0007 | Refresh           | Looks    | Redraw graphics                  |
-| 8  | 0008 | Random            | Math     | Generate random number           |
-| 11 | 000B | GetDistanceTo     | Position | Calculate distance               |
-| 12 | 000C | GetDirectionTo    | Position | Calculate heading                |
-| 13 | 000D | PushInteraction   | Control  | Queue interaction                |
-| 14 | 000E | FindBestObject    | Control  | Search lot for object            |
-| 17 | 0011 | IdleForInput      | Control  | Wait for user                    |
-| 18 | 0012 | RemoveObject      | Object   | Delete from world                |
-| 22 | 0016 | LookTowards       | Sim      | Face direction                   |
-| 23 | 0017 | PlaySound         | Looks    | Audio effect                     |
-| 25 | 0019 | TransferFunds     | Sim      | Move money                       |
-| 26 | 001A | Relationship      | Sim      | Modify sim relationship          |
-| 30 | 001E | AnimateSim        | Sim      | Play animation                   |
-| 42 | 002A | CreateObject      | Object   | Instantiate object               |
-| 45 | 002D | GotoRoutingSlot   | Position | Walk to position                 |
-| 46 | 002E | Snap              | Position | Teleport to position             |
+| Op  | Hex  | Name             | Purpose                     |
+| --- | ---- | ---------------- | --------------------------- |
+| 0   | 0000 | **Yield**        | Sleep/yield thread per tick |
+| 1   | 0001 | Generic Sim Call | VM sub-operation            |
 
-#### Opcodes by Category
+#### Expression (Most Common)
 
-**Flow Control:** Sleep(0), PushInteraction(13), FindBestObject(14), IdleForInput(17)
+| Op  | Hex  | Name           | Purpose                           |
+| --- | ---- | -------------- | --------------------------------- |
+| 2   | 0002 | **Expression** | Arithmetic/comparison/logic (57%) |
 
-**Math:** Expression(2), Random(8), GetDistanceTo(11), GetDirectionTo(12)
+#### Inventory & Objects
 
-**Object:** Grab(4), Drop(5), RemoveObject(18), CreateObject(42)
+| Op  | Hex  | Name            | Purpose                  |
+| --- | ---- | --------------- | ------------------------ |
+| 4   | 0004 | **Grab**        | Acquire object (pick up) |
+| 5   | 0005 | **Drop**        | Release object           |
+| 18  | 0012 | Remove Instance | Delete object instance   |
+| 42  | 002A | Create Object   | Instantiate new object   |
+| 43  | 002B | Drop Onto       | Place object on surface  |
 
-**Sim:** ChangeArticle(6), LookTowards(22), Relationship(26), AnimateSim(30)
+#### Navigation & Routing
 
-**Position:** GotoRoutingSlot(45), Snap(46)
+| Op  | Hex  | Name              | Purpose                     |
+| --- | ---- | ----------------- | --------------------------- |
+| 11  | 000B | Distance To       | Calculate distance in tiles |
+| 12  | 000C | Direction To      | Calculate heading (0-255)   |
+| 45  | 002D | Goto Routing Slot | Route to slot position      |
+| 46  | 002E | Snap              | Align to grid position      |
 
-**Looks:** Refresh(7), PlaySound(23)
+#### Animation & Display
+
+| Op  | Hex  | Name           | Purpose                    |
+| --- | ---- | -------------- | -------------------------- |
+| 6   | 0006 | Change Article | Change suit/accessory      |
+| 7   | 0007 | Update         | Refresh display on screen  |
+| 22  | 0016 | Look Towards   | Change facing direction    |
+| 41  | 0029 | Set Balloon    | Show thought/speech bubble |
+| 44  | 002C | Animate        | Play sprite animation      |
+
+#### Randomization
+
+| Op  | Hex  | Name       | Purpose                        |
+| --- | ---- | ---------- | ------------------------------ |
+| 8   | 0008 | **Random** | Generate random number 0-32767 |
 
 ---
 
@@ -454,49 +438,6 @@ The VM provides ~50 built-in primitives covering simulation operations. **Expres
 | Per-object      | In-world lifetime | Temps, state, attributes   |
 | Per-file (IFF)  | Game session      | BCON, BHAV, STR#, GLOB ref |
 | Global (shared) | Always            | Global.iff constants       |
-
----
-
-### Execution Model
-
-#### Polling Loop Pattern (ROLE BHAVs)
-
-ROLE BHAVs (52% of all behaviors) follow this execution pattern:
-
-```text
-loop:
-  Check state variables
-  If changed → recompute decisions
-  Check for user interaction → return to engine if pending
-  Animate/idle (YIELDS control back to engine)
-  Loop back (max ~10,000 iterations)
-```
-
-#### Yield Points
-
-Opcodes that pause execution and return control to the engine:
-
-| Opcode | Name    | Purpose              |
-| ------ | ------- | -------------------- |
-| 0x002C | Animate | Display animation    |
-| 0x0042 | Route   | Pathfinding          |
-| 0x0043 | Idle    | Stand idle           |
-| 0x0024 | Sleep   | Wait N frames        |
-
-**When BHAV yields:**
-1. Execution pauses at yield point
-2. Engine renders frame, handles other objects
-3. Engine resumes BHAV at yield point
-4. Polling loop continues
-
-#### State Communication
-
-Objects communicate via **attributes** (state variables), not function calls:
-
-- Engine **SETS** state (user click, game event)
-- ROLE BHAV **READS** state, decides action
-- ACTION BHAV **WRITES** state, returns
-- No call stack needed
 
 ---
 
@@ -1142,30 +1083,7 @@ The SimAntics Virtual Machine executes BHAV subroutines to drive all gameplay �
 | Architecture  | Multi-threaded, cooperative     |
 | Tick rate     | 15 ticks = 1 simulated minute   |
 | Scheduling    | Per-object threads, yield-based |
-
-### Core Architectural Principle
-
-> **Event-driven, not call-driven.** The engine owns execution, BHAVs respond to events.
-
-This means:
-- No inter-BHAV function calls exist in actual game files
-- BHAVs communicate via state variables (attributes)
-- OBJf maps lifecycle events to BHAV entry points
-- The polling loop pattern dominates (52% of all BHAVs)
-
-### OBJf Entry Points
-
-The OBJf chunk is THE entry point mechanism — it maps lifecycle events to BHAV IDs:
-
-| Event   | ID | When Called            | Purpose               |
-| ------- | -- | ---------------------- | --------------------- |
-| Init    | 0  | Object creation        | Setup state variables |
-| **Main**| 1  | **Every frame**        | Primary controller    |
-| Cleanup | 2  | Object deletion        | Free resources        |
-| Load    | 3  | Save file loaded       | Restore state         |
-| Reset   | 4  | State reset            | Clear temp flags      |
-
-💡 **To understand any object:** Find OBJf Event 1 (Main) → that BHAV ID is the autonomy core.
+| Documentation | ~10% of full system             |
 
 ### Threading Model
 
@@ -1259,14 +1177,6 @@ The OBJf chunk is THE entry point mechanism — it maps lifecycle events to BHAV
 | **Total**  | 95,487 | 100%       |
 
 Expression (arithmetic/comparison) dominates — over half of all instructions.
-
-### Key Parsing Insights
-
-1. **Every instruction has TWO exit paths** (true/false pointers) — code is a graph, not linear
-2. **Opcode ≥ 256 = subroutine call** — the opcode value IS the BHAV ID
-3. **Operand field (8 bytes) is context-dependent** — interpretation varies by opcode
-4. **0xFE/0xFF pointers = return** — special flow control values (254=true, 255=false)
-5. **No opcode 0x0001 (BHAV Call) in actual TS1 files** — proves no function calls
 
 ### Global Subroutines (Samples)
 
